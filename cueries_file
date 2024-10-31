@@ -1,0 +1,29 @@
+query MissionById {
+    missionById(missionId: 5) {
+        id
+        missionId
+        missionDate
+        airborneAircraft
+        attackingAircraft
+        bombingAircraft
+        aircraftReturned
+        aircraftFailed
+        aircraftDamaged
+        aircraftLost
+    }
+
+query MissionsByDate {
+    missionsByDate(dateStart: "1944-08-06", dateEnd: "1944-08-06") {
+        missionId
+        missionDate
+        airborneAircraft
+        attackingAircraft
+        bombingAircraft
+        aircraftReturned
+        aircraftFailed
+        aircraftDamaged
+        aircraftLost
+        id
+    }
+}
+

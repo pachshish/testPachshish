@@ -1,12 +1,12 @@
 import graphene
-from graphene import ObjectType, Field, Int, String, Date, List
 from graphene_sqlalchemy import SQLAlchemyObjectType
-from graphql import GraphQLError
 
+from graphene import ObjectType, Field, Int, String, Date, List
+from graphql import GraphQLError
 from database import db_session
 from models import TargetTypesModel, TargetsModel, MissionsModel, CountriesModel, CitiesModel
 
-class Missions(graphene.ObjectType):
+class Missions(SQLAlchemyObjectType):
     class Meta:
         model = MissionsModel
         interfaces = (graphene.relay.Node,)
@@ -18,7 +18,7 @@ class Query(ObjectType):
     missions_by_country = List(Missions, country_name=String(required=True))
     mission_by_industry = List(Missions, industry=String(required=True))
 
-
+    @staticmethod
     def resolve_mission_by_id(self, info, mission_id):
         mission = db_session.query(MissionsModel).get(mission_id)
         if mission is None:
@@ -34,19 +34,21 @@ class Query(ObjectType):
             raise GraphQLError('Missions not found')
         return missions
 
+    @staticmethod
     def resolve_missions_by_country(self, info, country_name):
         country = db_session.query(CountriesModel).filter(CountriesModel.country_name == country_name).first()
         missions = (
             db_session.query(MissionsModel)
             .join(TargetsModel)
             .join(CitiesModel)
-            .filter(CitiesModel.country_id == country.country_id)
+            .filter(CitiesModel.country_id == CountriesModel.country_id)
             .all()
         )
         if missions is None:
             raise GraphQLError('Missions not found')
         return missions
 
+    @staticmethod
     def resolve_mission_by_industry(self, info, industry):
         missions = (db_session.query(MissionsModel)
                     .join(TargetsModel, TargetsModel.mission_id == MissionsModel.mission_id)
