@@ -1,10 +1,12 @@
 import graphene
-from graphene import ObjectType, Field, Int, String, Date
+from graphene import ObjectType, Field, Int, String, Date, List
 from graphene_sqlalchemy import SQLAlchemyObjectType
+from graphql import GraphQLError
+
 from database import db_session
 from models import TargetTypesModel, TargetsModel, MissionsModel, CountriesModel, CitiesModel
 
-class Missions(SQLAlchemyObjectType):
+class Missions(graphene.ObjectType):
     class Meta:
         model = MissionsModel
         interfaces = (graphene.relay.Node,)
@@ -12,16 +14,49 @@ class Missions(SQLAlchemyObjectType):
 
 class Query(ObjectType):
     mission_by_id = Field(Missions, mission_id=Int(required=True))
-    missions_by_date = Field(Missions, data_start=Date(required=True), data_end=Date(required=True))
+    missions_by_date = List(Missions, date_start=Date(required=True), date_end=Date(required=True))
+    missions_by_country = List(Missions, country_name=String(required=True))
+    mission_by_industry = List(Missions, industry=String(required=True))
 
 
     def resolve_mission_by_id(self, info, mission_id):
-        return db_session.query(MissionsModel).get(mission_id)
+        mission = db_session.query(MissionsModel).get(mission_id)
+        if mission is None:
+            raise GraphQLError('Mission not found')
+        return mission
 
-    def resolve_missions_by_date(self, info, data_start, data_end):
-        return db_session.query(MissionsModel).filter(
-            data_start >= MissionsModel.mission_date <= data_end
-        ).all()
+    @staticmethod
+    def resolve_missions_by_date(root, info, date_start, date_end):
+        missions = db_session.query(MissionsModel).filter(
+            MissionsModel.mission_date.between(date_start, date_end)
+        )
+        if missions is None:
+            raise GraphQLError('Missions not found')
+        return missions
+
+    def resolve_missions_by_country(self, info, country_name):
+        country = db_session.query(CountriesModel).filter(CountriesModel.country_name == country_name).first()
+        missions = (
+            db_session.query(MissionsModel)
+            .join(TargetsModel)
+            .join(CitiesModel)
+            .filter(CitiesModel.country_id == country.country_id)
+            .all()
+        )
+        if missions is None:
+            raise GraphQLError('Missions not found')
+        return missions
+
+    def resolve_mission_by_industry(self, info, industry):
+        missions = (db_session.query(MissionsModel)
+                    .join(TargetsModel, TargetsModel.mission_id == MissionsModel.mission_id)
+                    .filter(TargetsModel.target_industry == industry)
+                    ).all()
+        if missions is None:
+            raise GraphQLError('Missions not found')
+        return missions
+
+
 
 
 

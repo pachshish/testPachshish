@@ -5,6 +5,7 @@ from sqlalchemy.orm import relationship
 Base = declarative_base()
 
 
+
 class CitiesModel(Base):
     __tablename__ = 'cities'
     city_id = Column(Integer, primary_key=True)
@@ -30,6 +31,12 @@ class MissionsModel(Base):
     aircraft_damaged = Column(Float) #? אולי זה טייפ אחר
     aircraft_lost  = Column(Boolean)
 
+    targets = relationship(
+        "TargetsModel",
+        back_populates="missions"
+
+    )
+
 class TargetsModel(Base):
     __tablename__ = 'targets'
     target_id = Column(Integer, primary_key=True)
@@ -38,6 +45,12 @@ class TargetsModel(Base):
     city_id = Column(Integer, ForeignKey("cities.city_id"))
     target_type_id = Column(Integer, ForeignKey("targetTypes.target_type_id"))
     target_priority = Column(Integer)
+
+    missions = relationship(
+        "MissionsModel",
+        back_populates="targets"
+
+    )
 
 class TargetTypesModel(Base):
     __tablename__ = 'targetTypes'
